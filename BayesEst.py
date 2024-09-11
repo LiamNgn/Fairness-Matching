@@ -3,7 +3,6 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import quad
-import seaborn as sns
 
 
 #In the case of Gaussian marginals
