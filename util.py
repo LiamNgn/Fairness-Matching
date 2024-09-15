@@ -8,8 +8,8 @@ import pandas as pd
 import random
 import time
 from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii
-from BayesEst import bayesian_est
-
+from BayesEst import anal_cond_exp
+from itertools import compress
 
 
 def create_students(n_stud: int, prop_gp: list, mean_gp: list, std_gp: list):
@@ -157,39 +157,77 @@ def multivariate_ecdf(vector_points,value):
     return rank[0]/len(rank)
 
 
-def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma):
-    updated_grade_estimate_1 = [bayesian_est(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-    updated_grade_estimate_2 = [bayesian_est(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
-    res1 = st.ecdf(updated_grade_estimate_1)
-    res2 = st.ecdf(updated_grade_estimate_2)
-    grade_estimated[1][0] = updated_grade_estimate_1
-    grade_estimated[1][1] = updated_grade_estimate_2
-    grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
-    #ECDF
-    multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
-    multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
-    gr1_ecdf_pb = res1.cdf.evaluate(Pb).item()
-    gr2_ecdf_pb = res2.cdf.evaluate(Pb).item()
+def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
+    type_bayes = ('right','left','both')
+    if type not in type_bayes:
+        raise ValueError(f'bayes_update must be one of {type_bayes}')
+    
+    if type == 'right':
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        res1 = st.ecdf(updated_grade_estimate_1)
+        res2 = st.ecdf(updated_grade_estimate_2)
+        grade_estimated[1][0] = updated_grade_estimate_1
+        grade_estimated[1][1] = updated_grade_estimate_2
+        grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
+        #ECDF
+        multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
+        multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
+        gr1_ecdf_pb = res1.cdf.evaluate(Pb).item()
+        gr2_ecdf_pb = res2.cdf.evaluate(Pb).item()
 
-    return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
+        return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
+
+    if type == 'both':
+        updated_grade_estimate_1B = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2B = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1A = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2A = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        res1B = st.ecdf(updated_grade_estimate_1B)
+        res2B = st.ecdf(updated_grade_estimate_2B)
+        res1A = st.ecdf(updated_grade_estimate_1A)
+        res2A = st.ecdf(updated_grade_estimate_2A)
+        grade_estimated[1][0] = updated_grade_estimate_1B
+        grade_estimated[1][1] = updated_grade_estimate_2B
+        grade_estimated[0][0] = updated_grade_estimate_1A
+        grade_estimated[0][1] = updated_grade_estimate_2A
+        grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
+        #ECDF
+        multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
+        multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
+        gr1_ecdf_pb = res1B.cdf.evaluate(Pb).item()
+        gr2_ecdf_pb = res2B.cdf.evaluate(Pb).item()
+        gr1_ecdf_pa = res1A.cdf.evaluate(Pa).item()
+        gr2_ecdf_pa = res2A.cdf.evaluate(Pa).item()
+
+        return gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
 
 def bayes_update_grade(Pa,Pb,grade_estimated,chi,sigma,bayes_type='right'):
     type_bayes = ('right','left','both')
     if bayes_type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     if bayes_type == 'right':
-        updated_grade_estimate_1 = [bayesian_est(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-        updated_grade_estimate_2 = [bayesian_est(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
         grade_estimated[1][0] = updated_grade_estimate_1
         grade_estimated[1][1] = updated_grade_estimate_2
     elif bayes_type == 'left':
-        updated_grade_estimate_1 = [bayesian_est(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
-        updated_grade_estimate_2 = [bayesian_est(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        grade_estimated[0][0] = updated_grade_estimate_1
+        grade_estimated[0][1] = updated_grade_estimate_2 
+    elif bayes_type == 'both':
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        grade_estimated[1][0] = updated_grade_estimate_1
+        grade_estimated[1][1] = updated_grade_estimate_2
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
         grade_estimated[0][0] = updated_grade_estimate_1
         grade_estimated[0][1] = updated_grade_estimate_2 
     return grade_estimated      
 
-def welfare_metrics(cutoff_values,estimated_grade,chi,sigma,stud_pref):
+def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
     
     n_groups = len(stud_pref)
     
@@ -213,11 +251,11 @@ def welfare_metrics(cutoff_values,estimated_grade,chi,sigma,stud_pref):
         print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i])}')
         print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i])}')    
 
-def student_by_col(cutoff_values,estimated_grade,chi,sigma,stud_pref):
+def student_by_col(cutoff_values,estimated_grade,stud_pref):
     
     n_groups = len(stud_pref)
     no_col_0 = 0
-    no_col_1 = 1
+    no_col_1 = 0
     for i in range(n_groups):
         all_choices = []
         no_choices = []
@@ -230,7 +268,7 @@ def student_by_col(cutoff_values,estimated_grade,chi,sigma,stud_pref):
         one_choice_index = list(compress(range(len(one_choice)),one_choice))
         
         col_0 = 0
-        col_1 = 1
+        col_1 = 0
         pref_all_choices = np.array(stud_pref[i])[all_choices_index]
         for pref in pref_all_choices:
             if np.where(pref==0)[0][0] == 0:
@@ -269,9 +307,13 @@ def cdfmis(x, y, sigma, rho):
 
 
 def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi, sigma):
-    gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma)    
+    # gr1_ecdf_pa,gr2_ecdf_pa,
+    gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type='right')    
     f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
     f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB
+    # f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
+    # f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
+ 
     return f1, f2
 
 
