@@ -45,29 +45,5 @@ best = fmin(
     max_evals=5000 # Number of optimization attempts
 )
 print(best)
-
-# %%
-def objective(params):
-    Pa,Pb = params
-    f1,f2 = market_clear(Pa, Pb, grade_estimated, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer, prop_all_g_prefer, sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma)
-    return f1**2 + f2**2
-# %%
-cutoff_values = [best['x'],best['y']]
-cutoff_values
 # %%
 objective(best)
-# %%
-test_Pb = np.arange(-2,6,0.1)
-# %%
-obj_list = []
-for i in test_Pb:
-    best = {'x': 5, 'y': i}
-    obj_list.append(objective(best))
-# %%
-import matplotlib.pyplot as plt
-plt.scatter(test_Pb,obj_list)
-plt.show()
-# %%
-for i in test_Pb:
-    print(i)
-    print(sampling_ecdf(grade_estimated,1,i,chi,sigma,type='right'))
