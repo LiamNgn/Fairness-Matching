@@ -10,7 +10,7 @@ import time
 from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii
 from BayesEst import anal_cond_exp
 from itertools import compress
-
+import copy
 
 def create_students(n_stud: int, prop_gp: list, mean_gp: list, std_gp: list):
     n_gp = prop_gp.__len__()
@@ -60,7 +60,7 @@ def create_stud_pref_2(students, prop_0):
         group = []
         for j in range(students[i].size):
             rand = np.random.rand()
-            if rand < prop_0:
+            if rand < prop_0[i]:
                 group.append([0,1])
             else:
                 group.append([1,0])
@@ -167,9 +167,10 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
         res1 = st.ecdf(updated_grade_estimate_1)
         res2 = st.ecdf(updated_grade_estimate_2)
-        grade_estimated[1][0] = updated_grade_estimate_1
-        grade_estimated[1][1] = updated_grade_estimate_2
-        grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
+        updated_grade_estimated = copy.deepcopy(grade_estimated)
+        updated_grade_estimated[1][0] = updated_grade_estimate_1
+        updated_grade_estimated[1][1] = updated_grade_estimate_2
+        grade_estimated_gr = grades_col_to_grades_gr(updated_grade_estimated)
         #ECDF
         multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
         multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
@@ -187,11 +188,11 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
         res2B = st.ecdf(updated_grade_estimate_2B)
         res1A = st.ecdf(updated_grade_estimate_1A)
         res2A = st.ecdf(updated_grade_estimate_2A)
-        grade_estimated[1][0] = updated_grade_estimate_1B
-        grade_estimated[1][1] = updated_grade_estimate_2B
-        grade_estimated[0][0] = updated_grade_estimate_1A
-        grade_estimated[0][1] = updated_grade_estimate_2A
-        grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
+        updated_grade_estimated[1][0] = updated_grade_estimate_1B
+        updated_grade_estimated[1][1] = updated_grade_estimate_2B
+        updated_grade_estimated[0][0] = updated_grade_estimate_1A
+        updated_grade_estimated[0][1] = updated_grade_estimate_2A
+        grade_estimated_gr = grades_col_to_grades_gr(updated_grade_estimated)
         #ECDF
         multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
         multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
@@ -306,14 +307,18 @@ def cdfmis(x, y, sigma, rho):
     return norm.cdf(x, scale = sigma) - multivariate_normal([0, 0], [[sigma**2, sigma**2 * rho], [sigma**2 * rho, sigma**2]]).cdf(np.array([x,y]))
 
 
-def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi, sigma):
-    # gr1_ecdf_pa,gr2_ecdf_pa,
-    gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type='right')    
-    f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
-    f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB
-    # f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
-    # f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
- 
+def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi, sigma,bayes = 'none'):
+    type_bayes = ('right','left','both','none')
+    if bayes not in type_bayes:
+        raise ValueError(f'bayes_update must be one of {type_bayes}')
+    if bayes == 'both':
+        gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type=bayes)    
+        f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
+        f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
+    elif bayes == 'right':
+        gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type=bayes)    
+        f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
+        f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB   
     return f1, f2
 
 
