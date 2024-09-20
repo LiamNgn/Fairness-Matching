@@ -12,7 +12,7 @@ noise_mean = [0,0]
 sigma = [2,2] #std of noise of each groups
 prop_all_g_prefer = [0.4,0.4] #This should be the vector beta in the paper
 
-capacities_rate = [0.3,0.2] #This should be the vector alpha in the paper.
+capacities_rate = [0.4,0.4] #This should be the vector alpha in the paper.
 capacities = [int(r * n_stud) for r in capacities_rate]#This vector must have the same length as the number of college, i.e. len(capacities) = n_col. The componenets should be integers
 
 sigma_i = np.sqrt(chi[0]**2 + sigma[0]**2)
