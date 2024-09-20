@@ -161,13 +161,12 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
     type_bayes = ('right','left','both')
     if type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
-    
+    updated_grade_estimated = copy.deepcopy(grade_estimated)
     if type == 'right':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
         res1 = st.ecdf(updated_grade_estimate_1)
         res2 = st.ecdf(updated_grade_estimate_2)
-        updated_grade_estimated = copy.deepcopy(grade_estimated)
         updated_grade_estimated[1][0] = updated_grade_estimate_1
         updated_grade_estimated[1][1] = updated_grade_estimate_2
         grade_estimated_gr = grades_col_to_grades_gr(updated_grade_estimated)
@@ -207,26 +206,27 @@ def bayes_update_grade(Pa,Pb,grade_estimated,chi,sigma,bayes_type='right'):
     type_bayes = ('right','left','both')
     if bayes_type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
+    updated_grade_estimated = copy.deepcopy(grade_estimated)
     if bayes_type == 'right':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
-        grade_estimated[1][0] = updated_grade_estimate_1
-        grade_estimated[1][1] = updated_grade_estimate_2
+        updated_grade_estimated[1][0] = updated_grade_estimate_1
+        updated_grade_estimated[1][1] = updated_grade_estimate_2
     elif bayes_type == 'left':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
-        grade_estimated[0][0] = updated_grade_estimate_1
-        grade_estimated[0][1] = updated_grade_estimate_2 
+        updated_grade_estimated[0][0] = updated_grade_estimate_1
+        updated_grade_estimated[0][1] = updated_grade_estimate_2 
     elif bayes_type == 'both':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
-        grade_estimated[1][0] = updated_grade_estimate_1
-        grade_estimated[1][1] = updated_grade_estimate_2
+        updated_grade_estimated[1][0] = updated_grade_estimate_1
+        updated_grade_estimated[1][1] = updated_grade_estimate_2
         updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
-        grade_estimated[0][0] = updated_grade_estimate_1
-        grade_estimated[0][1] = updated_grade_estimate_2 
-    return grade_estimated      
+        updated_grade_estimated[0][0] = updated_grade_estimate_1
+        updated_grade_estimated[0][1] = updated_grade_estimate_2 
+    return updated_grade_estimated      
 
 def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
     

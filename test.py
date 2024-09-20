@@ -25,35 +25,12 @@ for i in range(len(chi)):
 stud_pref
 #%%
 grade_estimated
-#%%
-def objective(params):
-    Pa = params['x']
-    Pb = params['y']
-    f1,f2 = market_clear(Pa, Pb, grade_estimated, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,bayes='right')
-    return np.abs(f1) + np.abs(f2)
-    # return f1**2+f2**2
-
-# %%
-space = {
-    'x': hp.lognormal('x', -6, 6),
-    'y': hp.lognormal('y', -6, 6)
-}
-# %%
-best = fmin(
-    fn=objective, # Objective Function to optimize
-    space=space, # Hyperparameter's Search Space
-    algo=tpe.suggest, # Optimization algorithm (representative TPE)
-    max_evals=1000 # Number of optimization attempts
-)
-print(best)
-# %%
-objective(best)
 # %%
 def objective_bads(params):
     Pa,Pb = params
     f1,f2 = market_clear(Pa, Pb, grade_estimated, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,bayes='right')
-    return np.abs(f1) + np.abs(f2)
-    # return f1**2+f2**2
+    # return np.abs(f1) + np.abs(f2)
+    return f1**2+f2**2
 lower_bounds = np.array([-10, -10])
 upper_bounds = np.array([10, 10])
 plausible_lower_bounds = np.array([-5, -5])
@@ -68,3 +45,4 @@ print(f"BADS minimum at: x_min = {x_min.flatten()}, fval = {fval:.4g}")
 print(f"total f-count: {optimize_result['func_count']}, time: {round(optimize_result['total_time'], 2)} s")
 
 # %%
+print(capacities_rate)
