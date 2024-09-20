@@ -46,3 +46,5 @@ x_min = optimize_result['x']
 fval = optimize_result['fval']
 print(f"BADS minimum at: x_min = {x_min.flatten()}, fval = {fval:.4g}")
 print(f"total f-count: {optimize_result['func_count']}, time: {round(optimize_result['total_time'], 2)} s")
+
+# %%
