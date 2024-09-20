@@ -248,9 +248,9 @@ def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
             stud_first_choice = stud_pref[i][idx].index(0)
             second_choice.append(estimated_grade[stud_first_choice][i][idx] < cutoff_values[stud_first_choice])
 
-        print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i])}')
-        print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i])}')
-        print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i])}')    
+        print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i]):.2f}')
+        print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i]):.2f}')
+        print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i]):.2f}')    
 
 def student_by_col(cutoff_values,estimated_grade,stud_pref):
     
