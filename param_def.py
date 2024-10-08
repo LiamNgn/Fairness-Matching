@@ -1,7 +1,7 @@
 import numpy as np
 
 #Parameter to create student
-n_stud = 14884
+n_stud = 20000
 prop_gp = [0.4,0.6] #vector gamma in the paper
 mean_gp = [0,0]
 chi = [2,2] #std of latent qualities of groups

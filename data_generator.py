@@ -6,6 +6,7 @@ from param_def import *
 students = create_students(n_stud,prop_gp,mean_gp,std_gp = chi) #Create the latent qualities vector
 # grade_estimated = create_col_estim(n_col,students, noise_mean, sigma) #Create the college estimated vectors
 grade_estimated_gr = create_col_estim_corr_nois(n_col,students,noise_mean,sigma,lambdas)
+print(grade_estimated_gr)
 #%%
 # grade_estimated_gr = grades_col_to_grades_gr(grade_estimated)
 ### The final result before exporting should have the form 
