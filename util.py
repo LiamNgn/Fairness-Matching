@@ -53,6 +53,24 @@ def create_col_estim(n_col,students, noise_mean, noise_std):
         col_estim.append(estim)
     return col_estim
 
+def create_col_estim_corr_nois(n_col,students, noise_mean, noise_std, noise_cov):
+    n_gp = noise_mean.__len__()
+    n_gp1 = noise_std.__len__()
+    n_gp2 = students.__len__()
+    n_gp3 = noise_cov.__len__()
+    if ((n_gp==n_gp1) and (n_gp==n_gp2) and (n_gp3 == n_gp)) == False:
+        print("group arguments of different sizes")
+        return 0
+    gr_col_estim = []
+    for i in range(n_gp):
+        estim = students[i].copy()
+        noise_means = [noise_mean[i],noise_mean[i]]
+        noise_covs = [[noise_std[i],noise_cov[i]],[noise_cov[i],noise_std[i]]]
+        noise = np.random.multivariate_normal(noise_means,noise_covs,len(estim)).T
+        estim = estim + noise
+        gr_col_estim.append(estim.T)
+    return gr_col_estim
+
 
 def create_stud_pref_2(students, prop_0):
     stud_pref=[]
@@ -157,14 +175,14 @@ def multivariate_ecdf(vector_points,value):
     return rank[0]/len(rank)
 
 
-def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
+def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas = [0,0] ,type = 'both'):
     type_bayes = ('right','left','both')
     if type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     updated_grade_estimated = copy.deepcopy(grade_estimated)
     if type == 'right':
-        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1], lambdas[1]) for i in grade_estimated[1][1]]
         res1 = st.ecdf(updated_grade_estimate_1)
         res2 = st.ecdf(updated_grade_estimate_2)
         updated_grade_estimated[1][0] = updated_grade_estimate_1
@@ -179,10 +197,10 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
         return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
 
     if type == 'both':
-        updated_grade_estimate_1B = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-        updated_grade_estimate_2B = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
-        updated_grade_estimate_1A = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
-        updated_grade_estimate_2A = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        updated_grade_estimate_1B = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2B = [anal_cond_exp(i,Pa,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1A = [anal_cond_exp(i,Pb,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2A = [anal_cond_exp(i,Pb,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[0][1]]
         res1B = st.ecdf(updated_grade_estimate_1B)
         res2B = st.ecdf(updated_grade_estimate_2B)
         res1A = st.ecdf(updated_grade_estimate_1A)
@@ -202,28 +220,28 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,type = 'both'):
 
         return gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
 
-def bayes_update_grade(Pa,Pb,grade_estimated,chi,sigma,bayes_type='right'):
+def bayes_update_grade(Pa,Pb,grade_estimated,chi,sigma,lambdas = [0.0],bayes_type='right'):
     type_bayes = ('right','left','both')
     if bayes_type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     updated_grade_estimated = copy.deepcopy(grade_estimated)
     if bayes_type == 'right':
-        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[1][1]]
         updated_grade_estimated[1][0] = updated_grade_estimate_1
         updated_grade_estimated[1][1] = updated_grade_estimate_2
     elif bayes_type == 'left':
-        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
-        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[0][1]]
         updated_grade_estimated[0][0] = updated_grade_estimate_1
         updated_grade_estimated[0][1] = updated_grade_estimate_2 
     elif bayes_type == 'both':
-        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0]) for i in grade_estimated[1][0]]
-        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1]) for i in grade_estimated[1][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[1][1]]
         updated_grade_estimated[1][0] = updated_grade_estimate_1
         updated_grade_estimated[1][1] = updated_grade_estimate_2
-        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0]) for i in grade_estimated[0][0]]
-        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1]) for i in grade_estimated[0][1]]
+        updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[0][0]]
+        updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[0][1]]
         updated_grade_estimated[0][0] = updated_grade_estimate_1
         updated_grade_estimated[0][1] = updated_grade_estimate_2 
     return updated_grade_estimated      
@@ -321,6 +339,21 @@ def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigma
         f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB   
     return f1, f2
 
+
+
+def market_clear_noise_corr(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi,  sigma, lambdas = [0,0], bayes = 'none'):
+    type_bayes = ('right','left','both','none')
+    if bayes not in type_bayes:
+        raise ValueError(f'bayes_update must be one of {type_bayes}')
+    if bayes == 'both':
+        gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas, type=bayes)    
+        f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
+        f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
+    elif bayes == 'right':
+        gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas,type=bayes)    
+        f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
+        f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB   
+    return f1, f2
 
 # def objective(params):
 #     Pa,Pb = params

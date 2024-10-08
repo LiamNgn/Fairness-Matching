@@ -1,5 +1,5 @@
 #%%
-from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii
+from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii,lambdas
 import numpy as np
 from util import *
 from itertools import compress
@@ -28,7 +28,7 @@ grade_estimated
 # %%
 def objective_bads(params):
     Pa,Pb = params
-    f1,f2 = market_clear(Pa, Pb, grade_estimated, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,bayes='right')
+    f1,f2 = market_clear_noise_corr(Pa, Pb, grade_estimated, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,lambdas,bayes='right')
     # return np.abs(f1) + np.abs(f2)
     return f1**2+f2**2
 # %%
