@@ -65,7 +65,7 @@ def create_col_estim_corr_nois(n_col,students, noise_mean, noise_std, noise_cov)
     for i in range(n_gp):
         estim = students[i].copy()
         noise_means = [noise_mean[i],noise_mean[i]]
-        noise_covs = [[noise_std[i],noise_cov[i]],[noise_cov[i],noise_std[i]]]
+        noise_covs = [[noise_std[i]**2,noise_cov[i]**2],[noise_cov[i]**2,noise_std[i]**2]]
         noise = np.random.multivariate_normal(noise_means,noise_covs,len(estim)).T
         estim = estim + noise
         gr_col_estim.append(estim.T)
