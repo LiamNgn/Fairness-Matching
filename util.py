@@ -368,7 +368,7 @@ def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigma
 
 
 
-def market_clear_noise_corr(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi,  sigma, lambdas = [0,0], bayes = 'none'):
+def market_clear_noise_corr(Pa, Pb, grade_estimated, stud_pref, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi,  sigma, lambdas = [0,0], bayes = 'none'):
     type_bayes = ('right_all','left','both','none','right_partial')
     if bayes not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
@@ -376,8 +376,8 @@ def market_clear_noise_corr(Pa, Pb, grade_estimated, prop, capA, capB, prefi, pr
         gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas, type=bayes)    
         f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
         f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
-    elif bayes == 'right':
-        gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas,type=bayes)    
+    elif bayes == 'right_partial' or bayes == 'right_all' :
+        gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas,type=bayes)    
         f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
         f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB   
     return f1, f2
