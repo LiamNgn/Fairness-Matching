@@ -175,12 +175,12 @@ def multivariate_ecdf(vector_points,value):
     return rank[0]/len(rank)
 
 
-def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas = [0,0] ,type = 'both'):
-    type_bayes = ('right','left','both')
+def sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas = [0,0] ,type = 'both'):
+    type_bayes = ('right_all','left','both','right_partial')
     if type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     updated_grade_estimated = copy.deepcopy(grade_estimated)
-    if type == 'right':
+    if type == 'right_all':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1], lambdas[1]) for i in grade_estimated[1][1]]
         res1 = st.ecdf(updated_grade_estimate_1)
@@ -195,6 +195,30 @@ def sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas = [0,0] ,type = 'both'
         gr2_ecdf_pb = res2.cdf.evaluate(Pb).item()
 
         return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
+
+    if type == 'right_partial':
+        # df1 = pd.DataFrame({'A':grade_estimated[0][0],'B':grade_estimated[1][0],'pref':stud_pref[0]}) #gr1
+        # df2 = pd.DataFrame({'A':grade_estimated[0][1],'B':grade_estimated[1][1],'pref':stud_pref[1]}) #gr2
+        df1 = pd.DataFrame({'A':grade_estimated[0][0],'B':grade_estimated[1][0],'pref':np.array(stud_pref[0]).T[0]})
+        df2 = pd.DataFrame({'A':grade_estimated[0][1],'B':grade_estimated[1][1],'pref':np.array(stud_pref[1]).T[0]})
+        df1.loc[df1['pref']==1,'pref_name'] = 'B'
+        df1.loc[df1['pref']==0,'pref_name'] = 'A'
+        df2.loc[df2['pref']==1,'pref_name'] = 'B'
+        df2.loc[df2['pref']==0,'pref_name'] = 'A'
+        df1['bayes_B'] = np.where(df1['pref_name']=='B',anal_cond_exp(df1['B'],Pa,chi[0],sigma[0],lambdas[0]),df1['B'])
+        df2['bayes_B'] = np.where(df2['pref_name']=='B',anal_cond_exp(df2['B'],Pa,chi[1],sigma[1],lambdas[1]),df2['B'])
+        res1 = st.ecdf(df1['bayes_B'])
+        res2 = st.ecdf(df2['bayes_B'])
+        updated_grade_estimated[1][0] = df1['bayes_B']
+        updated_grade_estimated[1][1] = df2['bayes_B']
+        grade_estimated_gr = grades_col_to_grades_gr(updated_grade_estimated)
+        #ECDF
+        multi_ecdf_gr1 = multivariate_ecdf(grade_estimated_gr[0],[Pa,Pb]).item()
+        multi_ecdf_gr2 = multivariate_ecdf(grade_estimated_gr[1],[Pa,Pb]).item()
+        gr1_ecdf_pb = res1.cdf.evaluate(Pb).item()
+        gr2_ecdf_pb = res2.cdf.evaluate(Pb).item()
+
+        return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2    
 
     if type == 'both':
         updated_grade_estimate_1B = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
@@ -269,6 +293,9 @@ def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
         print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i]):.2f}')
         print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i]):.2f}')
         print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i]):.2f}')    
+
+
+    
 
 def student_by_col(cutoff_values,estimated_grade,stud_pref):
     
