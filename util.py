@@ -369,7 +369,7 @@ def market_clear(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigma
 
 
 def market_clear_noise_corr(Pa, Pb, grade_estimated, prop, capA, capB, prefi, prefii, sigmai, sigmaii, cori, corii, chi,  sigma, lambdas = [0,0], bayes = 'none'):
-    type_bayes = ('right','left','both','none')
+    type_bayes = ('right_all','left','both','none','right_partial')
     if bayes not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     if bayes == 'both':
