@@ -244,16 +244,30 @@ def sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas = [0,0] ,typ
 
         return gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
 
-def bayes_update_grade(Pa,Pb,grade_estimated,chi,sigma,lambdas = [0.0],bayes_type='right'):
-    type_bayes = ('right','left','both')
+def bayes_update_grade(Pa,Pb,grade_estimated,stud_pref,chi,sigma,lambdas = [0.0],bayes_type='right'):
+    type_bayes = ('right_all','right_partial','left','both')
     if bayes_type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
     updated_grade_estimated = copy.deepcopy(grade_estimated)
-    if bayes_type == 'right':
+    if bayes_type == 'right_all':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pa,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[1][1]]
         updated_grade_estimated[1][0] = updated_grade_estimate_1
         updated_grade_estimated[1][1] = updated_grade_estimate_2
+    elif bayes_type == 'right_partial':
+        print(grade_estimated[0][0])
+        print(grade_estimated[1][0])
+        print(np.array(stud_pref[0]).T[0])
+        df1 = pd.DataFrame({'A':grade_estimated[0][0],'B':grade_estimated[1][0],'pref':np.array(stud_pref[0]).T[0]})
+        df2 = pd.DataFrame({'A':grade_estimated[0][1],'B':grade_estimated[1][1],'pref':np.array(stud_pref[1]).T[0]})
+        df1.loc[df1['pref']==1,'pref_name'] = 'B'
+        df1.loc[df1['pref']==0,'pref_name'] = 'A'
+        df2.loc[df2['pref']==1,'pref_name'] = 'B'
+        df2.loc[df2['pref']==0,'pref_name'] = 'A'
+        df1['bayes_B'] = np.where(df1['pref_name']=='B',anal_cond_exp(df1['B'],Pa,chi[0],sigma[0],lambdas[0]),df1['B'])
+        df2['bayes_B'] = np.where(df2['pref_name']=='B',anal_cond_exp(df2['B'],Pa,chi[1],sigma[1],lambdas[1]),df2['B'])
+        updated_grade_estimated[1][0] = df1['bayes_B']
+        updated_grade_estimated[1][1] = df2['bayes_B']
     elif bayes_type == 'left':
         updated_grade_estimate_1 = [anal_cond_exp(i,Pb,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[0][0]]
         updated_grade_estimate_2 = [anal_cond_exp(i,Pb,chi[1],sigma[1],lambdas[1]) for i in grade_estimated[0][1]]
