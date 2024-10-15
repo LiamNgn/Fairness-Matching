@@ -218,7 +218,7 @@ def sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas = [0,0] ,typ
         gr1_ecdf_pb = res1.cdf.evaluate(Pb).item()
         gr2_ecdf_pb = res2.cdf.evaluate(Pb).item()
 
-        return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2    
+        return gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2   
 
     if type == 'both':
         updated_grade_estimate_1B = [anal_cond_exp(i,Pa,chi[0],sigma[0],lambdas[0]) for i in grade_estimated[1][0]]
@@ -244,7 +244,7 @@ def sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas = [0,0] ,typ
 
         return gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2
 
-def bayes_update_grade(Pa,Pb,grade_estimated,stud_pref,chi,sigma,lambdas = [0.0],bayes_type='right'):
+def bayes_update_grade(Pa,Pb,grade_estimated,stud_pref,chi,sigma,lambdas = [0.0],bayes_type='right_partial'):
     type_bayes = ('right_all','right_partial','left','both')
     if bayes_type not in type_bayes:
         raise ValueError(f'bayes_update must be one of {type_bayes}')
@@ -255,9 +255,6 @@ def bayes_update_grade(Pa,Pb,grade_estimated,stud_pref,chi,sigma,lambdas = [0.0]
         updated_grade_estimated[1][0] = updated_grade_estimate_1
         updated_grade_estimated[1][1] = updated_grade_estimate_2
     elif bayes_type == 'right_partial':
-        print(grade_estimated[0][0])
-        print(grade_estimated[1][0])
-        print(np.array(stud_pref[0]).T[0])
         df1 = pd.DataFrame({'A':grade_estimated[0][0],'B':grade_estimated[1][0],'pref':np.array(stud_pref[0]).T[0]})
         df2 = pd.DataFrame({'A':grade_estimated[0][1],'B':grade_estimated[1][1],'pref':np.array(stud_pref[1]).T[0]})
         df1.loc[df1['pref']==1,'pref_name'] = 'B'
@@ -390,7 +387,7 @@ def market_clear_noise_corr(Pa, Pb, grade_estimated, stud_pref, prop, capA, capB
         gr1_ecdf_pa,gr2_ecdf_pa,gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,Pa,Pb,chi,sigma,lambdas, type=bayes)    
         f1 = prop*prefi*(1 - gr1_ecdf_pa) + (1 - prop)*prefii*(1 - gr2_ecdf_pa) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
         f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(gr1_ecdf_pa - multi_ecdf_gr1) + (1 -prop)*prefii*(gr2_ecdf_pa - multi_ecdf_gr2) - capB
-    elif bayes == 'right_partial' or bayes == 'right_all' :
+    elif (bayes == 'right_partial') or (bayes == 'right_all') :
         gr1_ecdf_pb,gr2_ecdf_pb,multi_ecdf_gr1,multi_ecdf_gr2 = sampling_ecdf(grade_estimated,stud_pref,Pa,Pb,chi,sigma,lambdas,type=bayes)    
         f1 = prop*prefi*(1 - cdf(Pa, sigmai)) + (1 - prop)*prefii*(1 - cdf(Pa, sigmaii)) + prop*(1 - prefi)*(gr1_ecdf_pb - multi_ecdf_gr1) + (1 -prop)*(1 - prefii)*(gr2_ecdf_pb - multi_ecdf_gr2) - capA
         f2 = prop*(1 - prefi)*(1 - gr1_ecdf_pb) + (1 - prop)*(1 - prefii)*(1 - gr2_ecdf_pb) + prop*prefi*(cdf(Pa,sigmai) - multi_ecdf_gr1) + (1 -prop)*prefii*(cdf(Pa,sigmaii) - multi_ecdf_gr2) - capB   
