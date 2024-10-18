@@ -352,7 +352,24 @@ def student_by_col(cutoff_values,estimated_grade,stud_pref):
 
     return no_col_0,no_col_1
 
-
+def utility_by_col(cutoff_values,estimated_grade,stud_pref):
+    df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+    df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+    A_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] > cutoff_values[0]),'A'])
+    A_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] > cutoff_values[0]),'A'])
+    A_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['A'] > cutoff_values[0])&(df1['B']<cutoff_values[1]),'A'])
+    A_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['A'] > cutoff_values[0])&(df2['B']<cutoff_values[1]),'A'])
+    B_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['B'] > cutoff_values[1]),'B'])
+    B_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['B'] > cutoff_values[1]),'B'])
+    B_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] < cutoff_values[0])&(df1['B'] > cutoff_values[1]),'B'])
+    B_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] < cutoff_values[0])&(df2['B'] > cutoff_values[1]),'B'])
+    print('Total A utility:', A_utility_gr1_first_choice + A_utility_gr2_first_choice + A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+    print('A utility for student with first choice:',A_utility_gr1_first_choice + A_utility_gr2_first_choice)
+    print('A utility for student with second choice:',A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+    print('Total B utility:', B_utility_gr1_first_choice + B_utility_gr2_first_choice + B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+    print('B utility for student with first choice:',B_utility_gr1_first_choice + B_utility_gr2_first_choice)
+    print('B utility for student with second choice:',B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+    return True
 
 def cdf(x, sigma):
     return norm.cdf(x, scale = sigma)
