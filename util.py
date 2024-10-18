@@ -7,7 +7,7 @@ from scipy.misc import derivative
 import pandas as pd
 import random
 import time
-from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii
+from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii,capacities
 from BayesEst import anal_cond_exp
 from itertools import compress
 import copy
@@ -370,6 +370,23 @@ def utility_by_col(cutoff_values,estimated_grade,stud_pref):
     print('B utility for student with first choice:',B_utility_gr1_first_choice + B_utility_gr2_first_choice)
     print('B utility for student with second choice:',B_utility_gr1_second_choice + B_utility_gr2_second_choice)
     return True
+
+def welfare_by_col(cutoff_values,estimated_grade,stud_pref):
+    df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+    df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+    A_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']>cutoff_values[0])])
+    A_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']>cutoff_values[0])])
+    A_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['A']>cutoff_values[0])&(df1['B']<cutoff_values[1])])
+    A_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['A']>cutoff_values[0])&(df2['B']<cutoff_values[1])])
+    B_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['B']>cutoff_values[1])])
+    B_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['B']>cutoff_values[1])])
+    B_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']<cutoff_values[0])&(df1['B']>cutoff_values[1])])
+    B_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']<cutoff_values[0])&(df2['B']>cutoff_values[1])])
+    print('Proportion of student admitted to A with first choice:', (A_first_choice_admit_gr1 + A_first_choice_admit_gr2)/capacities[0])
+    print('Proportion of student admitted to A with second choice:', (A_second_choice_admit_gr1 + A_second_choice_admit_gr2)/capacities[0])
+    print('Proportion of student admitted to B with first choice:', (B_first_choice_admit_gr1 + B_first_choice_admit_gr2)/capacities[1])
+    print('Proportion of student admitted to B with second choice:', (B_second_choice_admit_gr1 + B_second_choice_admit_gr2)/capacities[1])
+    return True   
 
 def cdf(x, sigma):
     return norm.cdf(x, scale = sigma)
