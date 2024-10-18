@@ -1,4 +1,5 @@
 #%%
+
 from param_def import chi,sigma,prop_gp,capacities_rate,prop_all_g_prefer,sigma_i,sigma_ii,cor_i,cor_ii,lambdas
 import numpy as np
 from util import *
@@ -29,8 +30,8 @@ grade_estimated
 def objective_bads(params):
     Pa,Pb = params
     f1,f2 = market_clear_noise_corr(Pa, Pb, grade_estimated, stud_pref, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,lambdas,bayes='right_partial')
-    # return np.abs(f1) + np.abs(f2)
-    return f1**2+f2**2
+    return np.abs(f1) + np.abs(f2)
+    # return f1**2+f2**2
 # %%
 lower_bounds = np.array([-10, -10])
 upper_bounds = np.array([10, 10])
@@ -47,5 +48,11 @@ fval = optimize_result['fval']
 print(f"BADS minimum at: x_min = {x_min.flatten()}, fval = {fval:.4g}")
 print(f"total f-count: {optimize_result['func_count']}, time: {round(optimize_result['total_time'], 2)} s")
 
+#%%
+f1,f2 = market_clear_noise_corr(x_min[0], x_min[1], grade_estimated, stud_pref, prop_gp[0], capacities_rate[0], capacities_rate[1], prop_all_g_prefer[0], prop_all_g_prefer[1], sigma_i, sigma_ii, cor_i, cor_ii,chi,sigma,lambdas,bayes='right_partial')
+
+
 # %%
 
+# %%
+# %%
