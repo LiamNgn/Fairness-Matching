@@ -349,7 +349,7 @@ def student_by_col(cutoff_values,estimated_grade,stud_pref):
         print(f'Number of student admitted to college 2 in group {i}:',col_1)
         no_col_0 += col_0
         no_col_1 += col_1
-
+    print(no_col_0,no_col_1)
     return no_col_0,no_col_1
 
 def utility_by_col(cutoff_values,estimated_grade,stud_pref):

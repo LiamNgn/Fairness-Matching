@@ -10,7 +10,7 @@ chi = [2,2] #std of latent qualities of groups
 n_col = 2 #Number of college
 noise_mean = [0,0]
 sigma = [2,2] #std of noise of each groups
-lambdas = [0.5,1] #cov of noies of each groups
+lambdas = [1,0.5] #cov of noies of each groups
 prop_all_g_prefer = [0.4,0.4] #This should be the vector beta in the paper
 
 capacities_rate = [0.2,0.2] #This should be the vector alpha in the paper.
