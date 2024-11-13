@@ -224,15 +224,15 @@ class simulation:
         type_bayes = ('right_all','right_partial','left','both')
         if bayes_type not in type_bayes:
             raise ValueError(f'bayes_update must be one of {type_bayes}')
-        updated_grade_estimated = copy.deepcopy(self.grade_estimated_gr)
+        updated_grade_estimated = copy.deepcopy(self.grade_estimate_col)
         if bayes_type == 'right_all':
             updated_grade_estimate_1 = [anal_cond_exp(i,Pa,self.std_gp[0],self.noise_std[0],self.noise_cov[0]) for i in self.grade_estimated_gr[1][0]]
             updated_grade_estimate_2 = [anal_cond_exp(i,Pa,self.std_gp[1],self.noise_std[1],self.noise_cov[1]) for i in self.grade_estimated_gr[1][1]]
             updated_grade_estimated[1][0] = updated_grade_estimate_1
             updated_grade_estimated[1][1] = updated_grade_estimate_2
         elif bayes_type == 'right_partial':
-            df1 = pd.DataFrame({'A':self.grade_estimate_col[0][0],'B':self.grade_estimate_cl[1][0],'pref':np.array(self.stud_pref[0]).T[0]})
-            df2 = pd.DataFrame({'A':self.grade_estimate_col[0][1],'B':self.grade_estimate_cl[1][1],'pref':np.array(self.stud_pref[1]).T[0]})
+            df1 = pd.DataFrame({'A':self.grade_estimate_col[0][0],'B':self.grade_estimate_col[1][0],'pref':np.array(self.stud_pref[0]).T[0]})
+            df2 = pd.DataFrame({'A':self.grade_estimate_col[0][1],'B':self.grade_estimate_col[1][1],'pref':np.array(self.stud_pref[1]).T[0]})
             df1.loc[df1['pref']==1,'pref_name'] = 'B'
             df1.loc[df1['pref']==0,'pref_name'] = 'A'
             df2.loc[df2['pref']==1,'pref_name'] = 'B'
@@ -328,6 +328,127 @@ class solver:
         print(f"BADS minimum at: x_min = {x_min.flatten()}, fval = {fval:.4g}")
         print(f"total f-count: {self.optimize_result['func_count']}, time: {round(self.optimize_result['total_time'], 2)} s")
         return x_min,fval
+
+@dataclass
+class welfare:
+    stud_pref: List = None
+    grade_estimate: List = None
+    cutoff_value: List = None
+ 
+ 
+    def welfare_metrics(self):
+        cutoff_values = self.cutoff_value
+        estimated_grade = self.grade_estimate
+        stud_pref = self.stud_pref
+        n_groups = len(stud_pref)
+        
+        for i in range(n_groups):
+            all_choices = []
+            no_choices = []
+            for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
+                all_choices.append(all(np.array(j) > cutoff_values))
+                no_choices.append(all(np.array(j) < cutoff_values))
+            one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
+            #one_choice_pref = list(compress(stud_pref[i],one_choice))
+            one_choice_index = list(compress(range(len(one_choice)),one_choice))
+            
+            second_choice = []
+
+            for idx in one_choice_index:
+                stud_first_choice = stud_pref[i][idx].index(0)
+                second_choice.append(estimated_grade[stud_first_choice][i][idx] < cutoff_values[stud_first_choice])
+
+            print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i]):.2f}')
+            print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i]):.2f}')
+            print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i]):.2f}')    
+
+
+        
+
+    def student_by_col(self):
+        cutoff_values = self.cutoff_value
+        estimated_grade = self.grade_estimate
+        stud_pref = self.stud_pref
+        n_groups = len(stud_pref)
+        no_col_0 = 0
+        no_col_1 = 0
+        for i in range(n_groups):
+            all_choices = []
+            no_choices = []
+            for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
+                all_choices.append(all(np.array(j) > cutoff_values))
+                no_choices.append(all(np.array(j) < cutoff_values))
+            all_choices_index = list(compress(range(len(all_choices)),all_choices))
+            one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
+            #one_choice_pref = list(compress(stud_pref[i],one_choice))
+            one_choice_index = list(compress(range(len(one_choice)),one_choice))
+            
+            col_0 = 0
+            col_1 = 0
+            pref_all_choices = np.array(stud_pref[i])[all_choices_index]
+            for pref in pref_all_choices:
+                if np.where(pref==0)[0][0] == 0:
+                    col_0 += 1
+                elif np.where(pref==0)[0][0] == 1:
+                    col_1 += 1
+
+            second_choice = []
+            
+            for idx in one_choice_index:
+                if estimated_grade[0][i][idx] < cutoff_values[0]:
+                    col_1 += 1
+                else:
+                    col_0 += 1
+            print(f'Number of student admitted to college 1 in group {i}:',col_0)
+            print(f'Number of student admitted to college 2 in group {i}:',col_1)
+            no_col_0 += col_0
+            no_col_1 += col_1
+        print(no_col_0,no_col_1)
+        return no_col_0,no_col_1
+
+    def utility_by_col(self):
+        cutoff_values = self.cutoff_value
+        estimated_grade = self.grade_estimate
+        stud_pref = self.stud_pref
+        df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+        df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+        A_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] > cutoff_values[0]),'A'])
+        A_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] > cutoff_values[0]),'A'])
+        A_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['A'] > cutoff_values[0])&(df1['B']<cutoff_values[1]),'A'])
+        A_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['A'] > cutoff_values[0])&(df2['B']<cutoff_values[1]),'A'])
+        B_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['B'] > cutoff_values[1]),'B'])
+        B_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['B'] > cutoff_values[1]),'B'])
+        B_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] < cutoff_values[0])&(df1['B'] > cutoff_values[1]),'B'])
+        B_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] < cutoff_values[0])&(df2['B'] > cutoff_values[1]),'B'])
+        print('Total A utility:', A_utility_gr1_first_choice + A_utility_gr2_first_choice + A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+        print('A utility for student with first choice:',A_utility_gr1_first_choice + A_utility_gr2_first_choice)
+        print('A utility for student with second choice:',A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+        print('Total B utility:', B_utility_gr1_first_choice + B_utility_gr2_first_choice + B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+        print('B utility for student with first choice:',B_utility_gr1_first_choice + B_utility_gr2_first_choice)
+        print('B utility for student with second choice:',B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+        return True
+
+    def welfare_by_col(self):
+        cutoff_values = self.cutoff_value
+        estimated_grade = self.grade_estimate
+        stud_pref = self.stud_pref
+        df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+        df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+        A_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']>cutoff_values[0])])
+        A_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']>cutoff_values[0])])
+        A_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['A']>cutoff_values[0])&(df1['B']<cutoff_values[1])])
+        A_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['A']>cutoff_values[0])&(df2['B']<cutoff_values[1])])
+        B_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['B']>cutoff_values[1])])
+        B_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['B']>cutoff_values[1])])
+        B_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']<cutoff_values[0])&(df1['B']>cutoff_values[1])])
+        B_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']<cutoff_values[0])&(df2['B']>cutoff_values[1])])
+        print('Proportion of student admitted to A with first choice:', (A_first_choice_admit_gr1 + A_first_choice_admit_gr2)/capacities[0])
+        print('Proportion of student admitted to A with second choice:', (A_second_choice_admit_gr1 + A_second_choice_admit_gr2)/capacities[0])
+        print('Proportion of student admitted to B with first choice:', (B_first_choice_admit_gr1 + B_first_choice_admit_gr2)/capacities[1])
+        print('Proportion of student admitted to B with second choice:', (B_second_choice_admit_gr1 + B_second_choice_admit_gr2)/capacities[1])
+        return True   
+
+
 
 def _rank2(points, mask=None):
     N = points.shape[0]
@@ -529,107 +650,107 @@ def multivariate_ecdf(vector_points,value):
 #         updated_grade_estimated[0][1] = updated_grade_estimate_2 
 #     return updated_grade_estimated   
 
-def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
+# def welfare_metrics(cutoff_values,estimated_grade,stud_pref):
     
-    n_groups = len(stud_pref)
+#     n_groups = len(stud_pref)
     
-    for i in range(n_groups):
-        all_choices = []
-        no_choices = []
-        for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
-            all_choices.append(all(np.array(j) > cutoff_values))
-            no_choices.append(all(np.array(j) < cutoff_values))
-        one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
-        #one_choice_pref = list(compress(stud_pref[i],one_choice))
-        one_choice_index = list(compress(range(len(one_choice)),one_choice))
+#     for i in range(n_groups):
+#         all_choices = []
+#         no_choices = []
+#         for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
+#             all_choices.append(all(np.array(j) > cutoff_values))
+#             no_choices.append(all(np.array(j) < cutoff_values))
+#         one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
+#         #one_choice_pref = list(compress(stud_pref[i],one_choice))
+#         one_choice_index = list(compress(range(len(one_choice)),one_choice))
         
-        second_choice = []
+#         second_choice = []
 
-        for idx in one_choice_index:
-            stud_first_choice = stud_pref[i][idx].index(0)
-            second_choice.append(estimated_grade[stud_first_choice][i][idx] < cutoff_values[stud_first_choice])
+#         for idx in one_choice_index:
+#             stud_first_choice = stud_pref[i][idx].index(0)
+#             second_choice.append(estimated_grade[stud_first_choice][i][idx] < cutoff_values[stud_first_choice])
 
-        print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i]):.2f}')
-        print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i]):.2f}')
-        print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i]):.2f}')    
+#         print(f'Proportion of students in group {i} with no offer {sum(no_choices)/len(stud_pref[i]):.2f}')
+#         print(f'Proportion of students in group {i} with only a second preference offer {sum(second_choice)/len(stud_pref[i]):.2f}')
+#         print(f'Proportion of students in group {i} with first choice offer {(len(stud_pref[i]) - sum(no_choices) - sum(second_choice))/len(stud_pref[i]):.2f}')    
 
 
     
 
-def student_by_col(cutoff_values,estimated_grade,stud_pref):
+# def student_by_col(cutoff_values,estimated_grade,stud_pref):
     
-    n_groups = len(stud_pref)
-    no_col_0 = 0
-    no_col_1 = 0
-    for i in range(n_groups):
-        all_choices = []
-        no_choices = []
-        for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
-            all_choices.append(all(np.array(j) > cutoff_values))
-            no_choices.append(all(np.array(j) < cutoff_values))
-        all_choices_index = list(compress(range(len(all_choices)),all_choices))
-        one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
-        #one_choice_pref = list(compress(stud_pref[i],one_choice))
-        one_choice_index = list(compress(range(len(one_choice)),one_choice))
+#     n_groups = len(stud_pref)
+#     no_col_0 = 0
+#     no_col_1 = 0
+#     for i in range(n_groups):
+#         all_choices = []
+#         no_choices = []
+#         for j in zip(estimated_grade[0][i],estimated_grade[1][i]):
+#             all_choices.append(all(np.array(j) > cutoff_values))
+#             no_choices.append(all(np.array(j) < cutoff_values))
+#         all_choices_index = list(compress(range(len(all_choices)),all_choices))
+#         one_choice = [not(a|b) for a,b in zip(all_choices,no_choices)]
+#         #one_choice_pref = list(compress(stud_pref[i],one_choice))
+#         one_choice_index = list(compress(range(len(one_choice)),one_choice))
         
-        col_0 = 0
-        col_1 = 0
-        pref_all_choices = np.array(stud_pref[i])[all_choices_index]
-        for pref in pref_all_choices:
-            if np.where(pref==0)[0][0] == 0:
-                col_0 += 1
-            elif np.where(pref==0)[0][0] == 1:
-                col_1 += 1
+#         col_0 = 0
+#         col_1 = 0
+#         pref_all_choices = np.array(stud_pref[i])[all_choices_index]
+#         for pref in pref_all_choices:
+#             if np.where(pref==0)[0][0] == 0:
+#                 col_0 += 1
+#             elif np.where(pref==0)[0][0] == 1:
+#                 col_1 += 1
 
-        second_choice = []
+#         second_choice = []
         
-        for idx in one_choice_index:
-            if estimated_grade[0][i][idx] < cutoff_values[0]:
-                col_1 += 1
-            else:
-                col_0 += 1
-        print(f'Number of student admitted to college 1 in group {i}:',col_0)
-        print(f'Number of student admitted to college 2 in group {i}:',col_1)
-        no_col_0 += col_0
-        no_col_1 += col_1
-    print(no_col_0,no_col_1)
-    return no_col_0,no_col_1
+#         for idx in one_choice_index:
+#             if estimated_grade[0][i][idx] < cutoff_values[0]:
+#                 col_1 += 1
+#             else:
+#                 col_0 += 1
+#         print(f'Number of student admitted to college 1 in group {i}:',col_0)
+#         print(f'Number of student admitted to college 2 in group {i}:',col_1)
+#         no_col_0 += col_0
+#         no_col_1 += col_1
+#     print(no_col_0,no_col_1)
+#     return no_col_0,no_col_1
 
-def utility_by_col(cutoff_values,estimated_grade,stud_pref):
-    df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
-    df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
-    A_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] > cutoff_values[0]),'A'])
-    A_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] > cutoff_values[0]),'A'])
-    A_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['A'] > cutoff_values[0])&(df1['B']<cutoff_values[1]),'A'])
-    A_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['A'] > cutoff_values[0])&(df2['B']<cutoff_values[1]),'A'])
-    B_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['B'] > cutoff_values[1]),'B'])
-    B_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['B'] > cutoff_values[1]),'B'])
-    B_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] < cutoff_values[0])&(df1['B'] > cutoff_values[1]),'B'])
-    B_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] < cutoff_values[0])&(df2['B'] > cutoff_values[1]),'B'])
-    print('Total A utility:', A_utility_gr1_first_choice + A_utility_gr2_first_choice + A_utility_gr1_second_choice + A_utility_gr2_second_choice)
-    print('A utility for student with first choice:',A_utility_gr1_first_choice + A_utility_gr2_first_choice)
-    print('A utility for student with second choice:',A_utility_gr1_second_choice + A_utility_gr2_second_choice)
-    print('Total B utility:', B_utility_gr1_first_choice + B_utility_gr2_first_choice + B_utility_gr1_second_choice + B_utility_gr2_second_choice)
-    print('B utility for student with first choice:',B_utility_gr1_first_choice + B_utility_gr2_first_choice)
-    print('B utility for student with second choice:',B_utility_gr1_second_choice + B_utility_gr2_second_choice)
-    return True
+# def utility_by_col(cutoff_values,estimated_grade,stud_pref):
+#     df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+#     df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+#     A_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] > cutoff_values[0]),'A'])
+#     A_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] > cutoff_values[0]),'A'])
+#     A_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['A'] > cutoff_values[0])&(df1['B']<cutoff_values[1]),'A'])
+#     A_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['A'] > cutoff_values[0])&(df2['B']<cutoff_values[1]),'A'])
+#     B_utility_gr1_first_choice = sum(df1.loc[(df1['pref'] == 1)&(df1['B'] > cutoff_values[1]),'B'])
+#     B_utility_gr2_first_choice = sum(df2.loc[(df2['pref'] == 1)&(df2['B'] > cutoff_values[1]),'B'])
+#     B_utility_gr1_second_choice = sum(df1.loc[(df1['pref'] == 0)&(df1['A'] < cutoff_values[0])&(df1['B'] > cutoff_values[1]),'B'])
+#     B_utility_gr2_second_choice = sum(df2.loc[(df2['pref'] == 0)&(df2['A'] < cutoff_values[0])&(df2['B'] > cutoff_values[1]),'B'])
+#     print('Total A utility:', A_utility_gr1_first_choice + A_utility_gr2_first_choice + A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+#     print('A utility for student with first choice:',A_utility_gr1_first_choice + A_utility_gr2_first_choice)
+#     print('A utility for student with second choice:',A_utility_gr1_second_choice + A_utility_gr2_second_choice)
+#     print('Total B utility:', B_utility_gr1_first_choice + B_utility_gr2_first_choice + B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+#     print('B utility for student with first choice:',B_utility_gr1_first_choice + B_utility_gr2_first_choice)
+#     print('B utility for student with second choice:',B_utility_gr1_second_choice + B_utility_gr2_second_choice)
+#     return True
 
-def welfare_by_col(cutoff_values,estimated_grade,stud_pref):
-    df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
-    df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
-    A_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']>cutoff_values[0])])
-    A_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']>cutoff_values[0])])
-    A_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['A']>cutoff_values[0])&(df1['B']<cutoff_values[1])])
-    A_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['A']>cutoff_values[0])&(df2['B']<cutoff_values[1])])
-    B_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['B']>cutoff_values[1])])
-    B_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['B']>cutoff_values[1])])
-    B_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']<cutoff_values[0])&(df1['B']>cutoff_values[1])])
-    B_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']<cutoff_values[0])&(df2['B']>cutoff_values[1])])
-    print('Proportion of student admitted to A with first choice:', (A_first_choice_admit_gr1 + A_first_choice_admit_gr2)/capacities[0])
-    print('Proportion of student admitted to A with second choice:', (A_second_choice_admit_gr1 + A_second_choice_admit_gr2)/capacities[0])
-    print('Proportion of student admitted to B with first choice:', (B_first_choice_admit_gr1 + B_first_choice_admit_gr2)/capacities[1])
-    print('Proportion of student admitted to B with second choice:', (B_second_choice_admit_gr1 + B_second_choice_admit_gr2)/capacities[1])
-    return True   
+# def welfare_by_col(cutoff_values,estimated_grade,stud_pref):
+#     df1 = pd.DataFrame({'A':estimated_grade[0][0],'B':estimated_grade[1][0],'pref':np.array(stud_pref[0]).T[0]})
+#     df2 = pd.DataFrame({'A':estimated_grade[0][1],'B':estimated_grade[1][1],'pref':np.array(stud_pref[1]).T[0]})
+#     A_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']>cutoff_values[0])])
+#     A_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']>cutoff_values[0])])
+#     A_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['A']>cutoff_values[0])&(df1['B']<cutoff_values[1])])
+#     A_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['A']>cutoff_values[0])&(df2['B']<cutoff_values[1])])
+#     B_first_choice_admit_gr1 = len(df1.loc[(df1['pref']==1)&(df1['B']>cutoff_values[1])])
+#     B_first_choice_admit_gr2 = len(df2.loc[(df2['pref']==1)&(df2['B']>cutoff_values[1])])
+#     B_second_choice_admit_gr1 = len(df1.loc[(df1['pref']==0)&(df1['A']<cutoff_values[0])&(df1['B']>cutoff_values[1])])
+#     B_second_choice_admit_gr2 = len(df2.loc[(df2['pref']==0)&(df2['A']<cutoff_values[0])&(df2['B']>cutoff_values[1])])
+#     print('Proportion of student admitted to A with first choice:', (A_first_choice_admit_gr1 + A_first_choice_admit_gr2)/capacities[0])
+#     print('Proportion of student admitted to A with second choice:', (A_second_choice_admit_gr1 + A_second_choice_admit_gr2)/capacities[0])
+#     print('Proportion of student admitted to B with first choice:', (B_first_choice_admit_gr1 + B_first_choice_admit_gr2)/capacities[1])
+#     print('Proportion of student admitted to B with second choice:', (B_second_choice_admit_gr1 + B_second_choice_admit_gr2)/capacities[1])
+#     return True   
 
 def cdf(x, sigma):
     return norm.cdf(x, scale = sigma)
