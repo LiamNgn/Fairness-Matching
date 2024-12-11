@@ -1,4 +1,4 @@
-# Intern
+
 
 Function `create_students` output a table of students. This table contains different vector, each elements of which is the latent quality of a student. The function take the following arguments:
 - Number of students: `n_stud: int`
